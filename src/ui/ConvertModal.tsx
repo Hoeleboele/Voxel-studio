@@ -52,6 +52,7 @@ export function ConvertModal() {
   const [opts, setOpts] = useState<ConvertOptions>(DEFAULT_CONVERT)
   const [body, setBody] = useState<BodyKind>('auto')
   const [target, setTarget] = useState<'new' | 'add'>('new')
+  const [sheetMode, setSheetMode] = useState<'models' | 'animation'>('animation')
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
 
@@ -67,6 +68,8 @@ export function ConvertModal() {
     return seg ? { img, part: seg.part, kind: seg.kind, facing: seg.facing } : null
   }, [frames, opts.alphaThreshold, opts.detectLayers, body, source])
 
+  const separate = frames.length > 1 && sheetMode === 'models'
+
   const set = <K extends keyof ConvertOptions>(k: K, v: ConvertOptions[K]) => setOpts((o) => ({ ...o, [k]: v }))
 
   const load = async (files: File[]) => {
@@ -74,6 +77,7 @@ export function ConvertModal() {
     try {
       const src = await loadSpriteFiles(files)
       setSource(src)
+      setSheetMode(src.needsSlicing ? 'models' : 'animation')
       setFileName(files[0].name.replace(/\.[^.]+$/, ''))
     } catch (err) {
       setSource(null)
@@ -87,7 +91,7 @@ export function ConvertModal() {
     setBusy(true)
     window.setTimeout(() => {
       try {
-        const res = convertSprite({ source, frames, opts: { ...opts, body }, name: fileName || 'Sprite', mode: target })
+        const res = convertSprite({ source, frames, opts: { ...opts, body }, name: fileName || 'Sprite', mode: target, separate: separate })
         if (animate) generateAllForProject()
         useUi.getState().set({ rightTab: animate ? 'timeline' : 'structure', frame: 0 })
         close()
@@ -164,14 +168,25 @@ export function ConvertModal() {
               { value: 'new', label: 'New project' }, { value: 'add', label: 'Add to current project' },
             ]} />
           </Row>
-          {frames.length > 1 && <p className="text-[11px] text-neutral-400">{frames.length} frames become an animation, in sheet order.</p>}
+          {frames.length > 1 && (
+            <>
+              <Row label="Multiple frames">
+                <Select<'models' | 'animation'> value={sheetMode} onChange={setSheetMode} options={[
+                  { value: 'models', label: 'Separate 3D model per sprite' }, { value: 'animation', label: 'One model + animation frames' },
+                ]} />
+              </Row>
+              <p className="text-[11px] text-neutral-400">
+                {separate ? `${frames.length} sprites become ${frames.length} models, laid out in a grid in sheet order.` : `${frames.length} frames become an animation, in sheet order.`}
+              </p>
+            </>
+          )}
         </>
       )}
       {message && <p className="text-xs text-amber-300">{message}</p>}
       <div className="flex justify-end gap-2">
         <Btn onClick={close}>Cancel</Btn>
         <Btn disabled={!source || busy || frames.length === 0} onClick={() => run(false)}>Convert</Btn>
-        <Btn active disabled={!source || busy || frames.length === 0 || !opts.detectLayers} onClick={() => run(true)}>Convert + generate animations</Btn>
+        <Btn active disabled={!source || busy || frames.length === 0 || !opts.detectLayers || separate} onClick={() => run(true)}>Convert + generate animations</Btn>
       </div>
     </Modal>
   )

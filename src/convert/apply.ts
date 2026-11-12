@@ -84,11 +84,113 @@ export interface ConvertRequest {
   opts: ReconstructOptions
   name: string
   mode: 'new' | 'add'
+  /** Convert every frame into its own model, laid out in a grid, instead of one model with animation frames. */
+  separate?: boolean
 }
 
 export interface ConvertResult { voxels: number; layers: number; animations: Animation[] }
 
+const GAP = 2
+
+/** Converts each frame to an independent model (a layer group each) arranged in a grid on the XZ plane. */
+function convertSeparate(req: ConvertRequest): ConvertResult {
+  const recs: Reconstruction[] = []
+  for (const f of req.frames) {
+    try { recs.push(reconstruct([f], req.opts, [])) } catch { /* frame without visible pixels */ }
+  }
+  if (recs.length === 0) throw new Error('The sprites have no visible pixels')
+
+  const cellW = Math.max(...recs.map((r) => r.size[0]))
+  const cellH = Math.max(...recs.map((r) => r.size[1]))
+  const cellD = Math.max(...recs.map((r) => r.size[2]))
+  const maxCols = Math.floor((256 - GAP) / (cellW + GAP))
+  const maxRows = Math.floor((256 - GAP) / (cellD + GAP))
+  if (maxCols < 1 || maxRows < 1 || maxCols * maxRows < recs.length || cellH + 2 > 256) {
+    throw new Error(`${recs.length} sprites do not fit in a 256 voxel grid. Lower the scale or depth, or convert fewer sprites`)
+  }
+  const cols = Math.min(maxCols, Math.max(Math.ceil(recs.length / maxRows), Math.ceil(Math.sqrt(recs.length))))
+  const rows = Math.ceil(recs.length / cols)
+  const width = cols * (cellW + GAP) + GAP
+  const depth = rows * (cellD + GAP) + GAP
+
+  const project = useProject.getState()
+  const merge = req.mode === 'add'
+  const baseX = merge ? (grid.bbox()?.max[0] ?? -GAP) + 1 : 0
+  const need: Vec3 = merge
+    ? [Math.max(project.bounds[0], baseX + width), Math.max(project.bounds[1], cellH + 2), Math.max(project.bounds[2], depth)]
+    : [Math.max(16, width), Math.max(16, cellH + 2), Math.max(16, depth)]
+  if (need.some((n) => n > 256)) throw new Error('The converted sprites do not fit in a 256 voxel grid')
+
+  useConvert.getState().set(null)
+  const layers: Layer[] = []
+  const place: { rec: Reconstruction; ids: Record<string, number>; origin: Vec3 }[] = []
+  let nextId = 1
+  recs.forEach((rec, i) => {
+    const origin: Vec3 = [
+      baseX + GAP + (i % cols) * (cellW + GAP) + Math.floor((cellW - rec.size[0]) / 2),
+      0,
+      GAP + Math.floor(i / cols) * (cellD + GAP) + Math.floor((cellD - rec.size[2]) / 2),
+    ]
+    const ids: Record<string, number> = {}
+    if (merge) {
+      const gid = project.addLayer({ name: `${req.name} ${i + 1}`, group: true })
+      for (const sp of rec.specs) {
+        const id = project.addLayer({ name: sp.name })
+        project.setLayerParent(id, gid)
+        ids[sp.key] = id
+      }
+    } else {
+      const gid = nextId++
+      layers.push(makeLayer(gid, `${req.name} ${i + 1}`, { isGroup: true }))
+      for (const sp of rec.specs) {
+        ids[sp.key] = nextId
+        layers.push(makeLayer(nextId++, sp.name, { part: sp.part, parentId: gid }))
+      }
+    }
+    place.push({ rec, ids, origin })
+  })
+
+  if (merge) {
+    if (need.some((n, i) => n !== project.bounds[i])) project.setBounds(need)
+  }
+  const setPivots = (update: (id: number, patch: Partial<Layer>) => void) => {
+    for (const { rec, ids, origin } of place) {
+      for (const sp of rec.specs) {
+        const pv = rec.pivots[sp.key]
+        update(ids[sp.key], { part: sp.part, ...(pv ? { pivot: [pv[0] + origin[0], pv[1] + origin[1], pv[2] + origin[2]] as Vec3 } : {}) })
+      }
+    }
+  }
+
+  let voxels = 0
+  if (merge) {
+    setPivots((id, patch) => project.updateLayer(id, patch))
+    const batch = new EditBatch(grid)
+    for (const { rec, ids, origin } of place) {
+      for (const v of rec.frames[0]) {
+        const x = v.x + origin[0], y = v.y + origin[1], z = v.z + origin[2]
+        if (grid.inBounds(x, y, z) && batch.setVoxel(x, y, z, v.color, ids[v.key] ?? Object.values(ids)[0], 0)) voxels++
+      }
+    }
+    batch.commit('Convert sprites')
+  } else {
+    setPivots((id, patch) => { Object.assign(layers.find((l) => l.id === id)!, patch) })
+    project.resetProject({ bounds: need, layers, meta: { name: req.name } })
+    for (const { rec, ids, origin } of place) {
+      for (const v of rec.frames[0]) {
+        grid.set(v.x + origin[0], v.y + origin[1], v.z + origin[2], v.color, ids[v.key] ?? Object.values(ids)[0], 0)
+        voxels++
+      }
+    }
+    grid.touch()
+  }
+  useEditor.getState().setSelection([])
+  engine?.frame()
+  return { voxels, layers: recs.length, animations: [] }
+}
+
 export function convertSprite(req: ConvertRequest): ConvertResult {
+  if (req.separate && req.frames.length > 1) return convertSeparate(req)
   const r = reconstruct(req.frames, req.opts, req.source.layerHints)
   const project = useProject.getState()
   const depth = Math.max(1, Math.round(req.opts.depth))
