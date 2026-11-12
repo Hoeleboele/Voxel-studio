@@ -11,6 +11,13 @@ npm run build    # type-check and production build
 npm test         # unit tests
 ```
 
+## Deployment
+
+The GitHub Actions workflow deploys the site to GitHub Pages whenever changes
+are pushed to `main`. It can also be started manually from the Actions tab.
+In the repository's Settings > Pages, set the build and deployment source to
+**GitHub Actions**. The workflow tests and builds the app before deploying it.
+
 ## Features
 
 - Orbit/pan/zoom viewport, perspective or orthographic camera, adjustable grid, background and lighting
