@@ -139,6 +139,12 @@ export function PreviewWindow() {
       <div className="flex cursor-move items-center gap-1 border-b border-neutral-700 bg-neutral-800 px-2 py-1" onPointerDown={startDrag}>
         <span className="flex-1 truncate text-xs font-medium">Preview{anim ? `: ${anim.name}` : ''}</span>
         <div onPointerDown={(e) => e.stopPropagation()} className="flex gap-1">
+          <select
+            className="rounded border border-neutral-600 bg-neutral-900 px-1 text-[11px]" title="Playback speed"
+            value={ui.playSpeed} onChange={(e) => ui.set({ playSpeed: Number(e.target.value) })}
+          >
+            {[0.25, 0.5, 1, 1.5, 2].map((s) => <option key={s} value={s}>{s}x</option>)}
+          </select>
           <Btn small active={ui.playing} onClick={() => ui.set({ playing: !ui.playing })}>{ui.playing ? 'Pause' : 'Play'}</Btn>
           <Btn small active={spin} onClick={() => setSpin(!spin)}>Spin</Btn>
           <Btn small onClick={() => ui.set({ previewOpen: false })}>x</Btn>

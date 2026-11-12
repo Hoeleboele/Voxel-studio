@@ -72,7 +72,7 @@ export const useEditor = create<EditorState>((set) => ({
   say: (status) => set({ status }),
 }))
 
-export type ModalId = 'new' | 'export' | 'import' | 'grid' | 'prefs' | 'about' | 'project' | null
+export type ModalId = 'new' | 'export' | 'import' | 'grid' | 'prefs' | 'about' | 'project' | 'convert' | null
 export type RightTab = 'palette' | 'layers' | 'structure' | 'timeline' | 'assets'
 
 interface UiState {
@@ -80,6 +80,7 @@ interface UiState {
   rightTab: RightTab
   previewOpen: boolean
   playing: boolean
+  playSpeed: number
   frame: number
   restorePrompt: number | null
   setModal(m: ModalId): void
@@ -92,6 +93,7 @@ export const useUi = create<UiState>((set) => ({
   rightTab: 'palette',
   previewOpen: false,
   playing: false,
+  playSpeed: 1,
   frame: 0,
   restorePrompt: null,
   setModal: (modal) => set({ modal }),

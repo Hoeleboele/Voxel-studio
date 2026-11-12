@@ -2,6 +2,7 @@ import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate'
 import type { Animation, Layer, Palette, ProjectMeta, Vec3 } from '../core/types'
 import { deserializeVoxels, serializeVoxels } from '../core/voxelIO'
 import { grid, useProject } from '../store/projectStore'
+import { restoreSession, serializeSession } from '../convert/apply'
 import { downloadBlob, safeName } from './download'
 
 const FORMAT_VERSION = 1
@@ -26,13 +27,14 @@ export function serializeProject(): Uint8Array {
     customPalettes: p.customPalettes,
     activePaletteId: p.activePaletteId,
     animations: p.animations.map((a) => ({
-      id: a.id, name: a.name, fps: a.fps, length: a.length, loop: a.loop, tracks: a.tracks,
+      id: a.id, name: a.name, fps: a.fps, length: a.length, loop: a.loop, tracks: a.tracks, kind: a.kind, variant: a.variant,
       snapshotFrames: Object.keys(a.snapshots).map(Number),
     })),
   }
   const files: Record<string, Uint8Array> = {
     'project.json': strToU8(JSON.stringify(json)),
     'voxels.bin': serializeVoxels(grid),
+    ...serializeSession(),
   }
   for (const a of p.animations) {
     for (const [frame, bytes] of Object.entries(a.snapshots)) files[`frames/${a.id}_${frame}.bin`] = bytes
@@ -51,7 +53,7 @@ export function loadProjectBytes(bytes: Uint8Array): void {
       const data = files[`frames/${a.id}_${f}.bin`]
       if (data) snapshots[f] = data
     }
-    return { id: a.id, name: a.name, fps: a.fps, length: a.length, loop: a.loop, tracks: a.tracks, snapshots }
+    return { id: a.id, name: a.name, fps: a.fps, length: a.length, loop: a.loop, tracks: a.tracks, kind: a.kind, variant: a.variant, snapshots }
   })
   useProject.getState().resetProject({
     bounds: json.bounds,
@@ -63,6 +65,7 @@ export function loadProjectBytes(bytes: Uint8Array): void {
   })
   if (files['voxels.bin']) deserializeVoxels(files['voxels.bin'], grid)
   grid.touch()
+  restoreSession(files)
 }
 
 export function saveProjectFile(): void {

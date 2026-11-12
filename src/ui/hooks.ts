@@ -75,7 +75,7 @@ export function usePlayback(): void {
       const anim = p.animations.find((a) => a.id === p.activeAnimId)
       if (!anim) return
       acc += dt
-      const step = 1000 / anim.fps
+      const step = 1000 / (anim.fps * Math.max(0.1, ui.playSpeed))
       while (acc >= step) {
         acc -= step
         const next = useUi.getState().frame + 1

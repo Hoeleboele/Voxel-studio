@@ -1,4 +1,4 @@
-import type { Animation, Keyframe, Layer, PartId, Vec3 } from '../core/types'
+import type { Animation, Ease, Keyframe, Layer, PartId, Vec3 } from '../core/types'
 
 export interface Pose { pos: Vec3; rot: Vec3 }
 
@@ -6,6 +6,16 @@ export const ZERO_POSE: Pose = { pos: [0, 0, 0], rot: [0, 0, 0] }
 
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t
 const lerp3 = (a: Vec3, b: Vec3, t: number): Vec3 => [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)]
+
+export function applyEase(ease: Ease | undefined, t: number): number {
+  switch (ease) {
+    case 'in': return t * t
+    case 'out': return 1 - (1 - t) * (1 - t)
+    case 'inOut': return t * t * (3 - 2 * t)
+    case 'step': return 0
+    default: return t
+  }
+}
 
 /** Interpolated pose of one layer at a (possibly fractional) frame. */
 export function samplePose(anim: Animation, layerId: number, frame: number): Pose {
@@ -29,7 +39,7 @@ export function samplePose(anim: Animation, layerId: number, frame: number): Pos
     if (!next) return { pos: prev.pos, rot: prev.rot }
   }
   const span = nextFrame - prevFrame
-  const t = span === 0 ? 0 : (frame - prevFrame) / span
+  const t = span === 0 ? 0 : applyEase(prev!.ease, (frame - prevFrame) / span)
   return { pos: lerp3(prev!.pos, next!.pos, t), rot: lerp3(prev!.rot, next!.rot, t) }
 }
 
@@ -95,6 +105,7 @@ export function makeTemplateAnimation(template: AnimTemplate, layers: Layer[], i
   const anim: Animation = {
     id,
     name: ANIM_TEMPLATES.find((t) => t.id === template)!.label,
+    kind: template,
     fps: template === 'attack' ? 12 : template === 'idle' ? 6 : 8,
     length,
     loop: template !== 'attack',

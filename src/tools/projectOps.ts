@@ -6,6 +6,7 @@ import { generateCharacter, requiredBounds } from '../templates/characters'
 import type { CharacterSpec } from '../templates/characters'
 import { engine } from '../viewport/engine'
 import { importVox } from '../io/vox'
+import { useConvert } from '../convert/apply'
 
 const KIND_NAMES = { humanoid: 'Humanoid', animal: 'Animal', monster: 'Monster', robot: 'Robot', blank: 'Blank' }
 
@@ -13,6 +14,7 @@ export function newCharacterProject(spec: CharacterSpec, bounds: [number, number
   const b = requiredBounds(spec.kind, spec.proportions, bounds)
   const gen = generateCharacter(spec, b)
   useProject.getState().resetProject({ bounds: gen.bounds, layers: gen.layers, meta: { name: `${KIND_NAMES[spec.kind]} character` } })
+  useConvert.getState().set(null)
   for (const v of gen.voxels) grid.set(v.x, v.y, v.z, v.color, v.layerId, v.material)
   grid.touch()
   useEditor.getState().setSelection([])

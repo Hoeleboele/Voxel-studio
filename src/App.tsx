@@ -7,6 +7,7 @@ import { DEFAULT_COLORS, DEFAULT_PROPORTIONS } from './templates/characters'
 import { Btn, useGridRevision } from './ui/common'
 import { useShortcuts, usePlayback } from './ui/hooks'
 import { AboutModal, ExportModal, GridModal, ImportModal, NewModal, PrefsModal, ProjectModal } from './ui/Modals'
+import { ConvertModal } from './ui/ConvertModal'
 import { PreviewWindow } from './ui/PreviewWindow'
 import { RightPanel } from './ui/RightPanel'
 import { Toolbar } from './ui/Toolbar'
@@ -87,6 +88,7 @@ export default function App() {
       {modal === 'new' && <NewModal />}
       {modal === 'export' && <ExportModal />}
       {modal === 'import' && <ImportModal />}
+      {modal === 'convert' && <ConvertModal />}
       {modal === 'grid' && <GridModal />}
       {modal === 'prefs' && <PrefsModal />}
       {modal === 'project' && <ProjectModal />}

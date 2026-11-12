@@ -18,6 +18,7 @@ export function Toolbar() {
       <Btn onClick={() => setModal('new')}>New</Btn>
       <Btn onClick={saveProjectFile} title="Save project (Ctrl+S)">Save</Btn>
       <Btn onClick={() => setModal('import')}>Import</Btn>
+      <Btn onClick={() => setModal('convert')} title="Convert a 2D sprite, sheet, GIF or Aseprite file into a voxel model">Sprite to 3D</Btn>
       <Btn onClick={() => setModal('export')}>Export</Btn>
       <span className="mx-1 h-5 w-px bg-neutral-700" />
       <Btn disabled={!history.canUndo} onClick={() => history.undo()} title={history.undoLabel ? `Undo ${history.undoLabel} (Ctrl+Z)` : 'Undo'}>Undo</Btn>

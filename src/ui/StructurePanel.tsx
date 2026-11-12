@@ -12,6 +12,7 @@ import { Btn, Row, Section, toHex, useDebounced, useGridRevision } from './commo
 import { OPPOSITE_PART } from './parts'
 import { hexToNum } from '../core/color'
 import { layerPivot } from '../io/rig'
+import { SpriteDepthSection } from './SpriteDepth'
 
 const KINDS: { value: CharacterKind; label: string }[] = [
   { value: 'humanoid', label: 'Humanoid' },
@@ -57,6 +58,7 @@ export function StructurePanel() {
 
   return (
     <div>
+      <SpriteDepthSection />
       <Section title="Character template">
         <Row label="Type">
           <select

@@ -6,7 +6,9 @@ import type { Animation, Vec3 } from '../core/types'
 import { gridFromBytes, serializeVoxels } from '../core/voxelIO'
 import { useUi } from '../store/editorStore'
 import { grid, uid, useProject } from '../store/projectStore'
-import { Btn, Check, NumberField, Row, Section } from './common'
+import { Btn, Check, NumberField, Row, Section, Select } from './common'
+import { BlendSection, EditTools, GeneratorSection } from './AnimationTools'
+import type { Ease } from '../core/types'
 
 function blankAnimation(name: string): Animation {
   return { id: uid(), name, fps: 8, length: 8, loop: true, tracks: {}, snapshots: {} }
@@ -27,7 +29,8 @@ export function TimelinePanel() {
 
   const writeKey = (pos: Vec3, rot: Vec3) => {
     if (!anim || !layer || layer.isGroup) return
-    project.setKeyframe(anim.id, layer.id, { frame, pos, rot })
+    const ease = track.find((k) => k.frame === frame)?.ease
+    project.setKeyframe(anim.id, layer.id, { frame, pos, rot, ...(ease ? { ease } : {}) })
   }
 
   const captureSnapshot = () => {
@@ -62,6 +65,7 @@ export function TimelinePanel() {
             {project.animations.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
           </select>
           <Btn small onClick={() => project.addAnimation(blankAnimation(`Animation ${project.animations.length + 1}`))}>New</Btn>
+          <Btn small disabled={!anim} onClick={() => anim && project.duplicateAnimation(anim.id)}>Copy</Btn>
           <Btn small disabled={!anim} onClick={() => anim && project.deleteAnimation(anim.id)}>Delete</Btn>
         </div>
         <div className="flex gap-1">
@@ -77,6 +81,8 @@ export function TimelinePanel() {
         <p className="text-[11px] text-neutral-500">Templates animate layers tagged with body parts (arms, legs, head, torso).</p>
       </Section>
 
+      <GeneratorSection />
+
       {anim && (
         <>
           <Section title="Settings">
@@ -90,6 +96,9 @@ export function TimelinePanel() {
             <Row label="Frames"><NumberField value={anim.length} min={1} max={120} onChange={(n) => project.updateAnimation(anim.id, { length: Math.max(1, Math.min(120, Math.round(n))) })} /></Row>
             <Check checked={anim.loop} onChange={(v) => project.updateAnimation(anim.id, { loop: v })} label="Loop" />
           </Section>
+
+          <EditTools key={anim.id} anim={anim} />
+          <BlendSection key={`blend-${anim.id}`} anim={anim} />
 
           <Section title={`Timeline - frame ${frame + 1} / ${anim.length}`}>
             <div className="flex gap-1">
@@ -146,6 +155,18 @@ export function TimelinePanel() {
                   <Btn small disabled={!hasKey} onClick={() => project.removeKeyframe(anim.id, layer.id, frame)}>Delete keyframe</Btn>
                   <Btn small onClick={() => writeKey([0, 0, 0], [0, 0, 0])}>Reset key</Btn>
                 </div>
+                {hasKey && (
+                  <Row label="Easing to next key">
+                    <Select<Ease>
+                      value={track.find((k) => k.frame === frame)?.ease ?? 'linear'}
+                      onChange={(ease) => project.setKeyframe(anim.id, layer.id, { frame, pos: pose.pos, rot: pose.rot, ease })}
+                      options={[
+                        { value: 'linear', label: 'Linear' }, { value: 'in', label: 'Ease in' }, { value: 'out', label: 'Ease out' },
+                        { value: 'inOut', label: 'Ease in-out' }, { value: 'step', label: 'Hold (step)' },
+                      ]}
+                    />
+                  </Row>
+                )}
                 <p className="text-[11px] text-neutral-500">Layers rotate rigidly around their pivot. Editing a value creates a keyframe.</p>
               </>
             ) : (

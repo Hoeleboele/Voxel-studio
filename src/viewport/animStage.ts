@@ -72,7 +72,7 @@ function buildLayers(grid: VoxelGrid, layers: Layer[], flat: boolean): Built {
 export class AnimStage {
   readonly root = new THREE.Group()
   private base: Built
-  private snapshots = new Map<number, Built>()
+  private snapshots = new Map<Uint8Array, Built>()
   private shown: Built
 
   constructor(
@@ -87,10 +87,10 @@ export class AnimStage {
   setFrame(anim: Animation | null, frame: number, snap = false): void {
     const snapBytes = anim?.snapshots[frame]
     if (anim && snapBytes) {
-      let built = this.snapshots.get(frame)
+      let built = this.snapshots.get(snapBytes)
       if (!built) {
         built = buildLayers(gridFromBytes(snapBytes, this.grid.bounds), this.layers, this.flat)
-        this.snapshots.set(frame, built)
+        this.snapshots.set(snapBytes, built)
         this.root.add(built.group)
       }
       this.show(built)

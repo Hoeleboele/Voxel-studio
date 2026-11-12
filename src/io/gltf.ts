@@ -145,7 +145,7 @@ export function exportGltf(grid: VoxelGrid, layers: Layer[], opts: GltfOptions):
 
     const gltfAnims: object[] = []
     for (const anim of opts.animations) {
-      if (anim.length < 1) continue
+      if (anim.length < 1 || !Object.values(anim.tracks).some((t) => t.length > 0)) continue
       const times = new Float32Array(anim.length)
       for (let f = 0; f < anim.length; f++) times[f] = f / anim.fps
       const timeAcc = bb.addAccessor(times, F32, anim.length, 'SCALAR', { min: [0], max: [times[anim.length - 1]] })
@@ -177,7 +177,10 @@ export function exportGltf(grid: VoxelGrid, layers: Layer[], opts: GltfOptions):
         samplers.push({ input: timeAcc, output: bb.addAccessor(rots[i], F32, anim.length, 'VEC4'), interpolation: 'LINEAR' })
         channels.push({ sampler: samplers.length - 1, target: { node: i + 1, path: 'rotation' } })
       })
-      gltfAnims.push({ name: anim.name, samplers, channels })
+      gltfAnims.push({
+        name: anim.name, samplers, channels,
+        extras: { kind: anim.kind ?? 'custom', variant: anim.variant ?? null, loop: anim.loop, fps: anim.fps },
+      })
     }
     if (gltfAnims.length) json.animations = gltfAnims
   }

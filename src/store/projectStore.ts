@@ -63,6 +63,7 @@ export interface ProjectState {
   addAnimation(anim: Animation): void
   updateAnimation(id: string, patch: Partial<Animation>): void
   deleteAnimation(id: string): void
+  duplicateAnimation(id: string): string | null
   setActiveAnim(id: string | null): void
   setKeyframe(animId: string, layerId: number, kf: Keyframe): void
   removeKeyframe(animId: string, layerId: number, frame: number): void
@@ -286,6 +287,20 @@ export const useProject = create<ProjectState>((set, get) => ({
     }),
 
   setActiveAnim: (id) => set({ activeAnimId: id }),
+
+  duplicateAnimation: (id) => {
+    const src = get().animations.find((a) => a.id === id)
+    if (!src) return null
+    const copy: Animation = {
+      ...src,
+      id: uid(),
+      name: `${src.name} copy`,
+      tracks: Object.fromEntries(Object.entries(src.tracks).map(([k, v]) => [k, v.map((kf) => ({ ...kf, pos: [...kf.pos] as Vec3, rot: [...kf.rot] as Vec3 }))])),
+      snapshots: { ...src.snapshots },
+    }
+    set((s) => ({ animations: [...s.animations, copy], activeAnimId: copy.id, dirty: true }))
+    return copy.id
+  },
 
   setKeyframe: (animId, layerId, kf) =>
     set((s) => ({

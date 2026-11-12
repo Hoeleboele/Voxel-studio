@@ -17,11 +17,11 @@ export interface Rig {
 
 const BONE_PARENT: Partial<Record<PartId, PartId | 'root'>> = {
   torso: 'root', legL: 'root', legR: 'root', legFL: 'root', legFR: 'root', legBL: 'root', legBR: 'root',
-  head: 'torso', armL: 'torso', armR: 'torso', tail: 'torso',
+  head: 'torso', armL: 'torso', armR: 'torso', tail: 'torso', wingL: 'torso', wingR: 'torso',
 }
 
 const BONE_ORDER: PartId[] = [
-  'torso', 'head', 'armL', 'armR', 'legL', 'legR', 'legFL', 'legFR', 'legBL', 'legBR', 'tail',
+  'torso', 'head', 'armL', 'armR', 'legL', 'legR', 'legFL', 'legFR', 'legBL', 'legBR', 'tail', 'wingL', 'wingR',
 ]
 
 /** Pivot used for a layer, matching the animation preview. */

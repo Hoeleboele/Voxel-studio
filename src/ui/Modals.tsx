@@ -6,6 +6,9 @@ import { buildExportMesh } from '../io/meshExport'
 import { exportVox } from '../io/vox'
 import { canvasToPng, renderGif, renderSpriteSheet, VIEW_LABELS } from '../io/sprites'
 import type { SpriteOptions, ViewId } from '../io/sprites'
+import { ENGINE_PRESETS, presetAnimations, scaleForHeight } from '../io/engine'
+import type { EnginePreset } from '../io/engine'
+import { exportAnimationPack } from '../io/pack'
 import { downloadBlob, readFileBytes, safeName } from '../io/download'
 import { parsePalette } from '../io/palette'
 import { DEFAULT_COLORS, DEFAULT_PROPORTIONS } from '../templates/characters'
@@ -106,7 +109,7 @@ export function ImportModal() {
   )
 }
 
-type Fmt = 'vox' | 'obj' | 'glb' | 'gltf' | 'stl' | 'png' | 'gif' | 'fbx'
+type Fmt = 'vox' | 'obj' | 'glb' | 'gltf' | 'stl' | 'png' | 'gif' | 'pack' | 'fbx'
 
 const FORMATS: { value: Fmt; label: string }[] = [
   { value: 'vox', label: 'VOX (MagicaVoxel)' },
@@ -116,6 +119,7 @@ const FORMATS: { value: Fmt; label: string }[] = [
   { value: 'stl', label: 'STL' },
   { value: 'png', label: 'PNG sprite sheet' },
   { value: 'gif', label: 'GIF animation' },
+  { value: 'pack', label: 'Animation pack (zip: sheets + GIFs)' },
   { value: 'fbx', label: 'FBX (not supported)' },
 ]
 
@@ -134,6 +138,7 @@ export function ExportModal() {
   const [center, setCenter] = useState(true)
   const [rig, setRig] = useState(false)
   const [withAnims, setWithAnims] = useState(true)
+  const [preset, setPreset] = useState<EnginePreset>('generic')
   const [groups, setGroups] = useState<Set<string>>(new Set(['Front', 'Side', 'Back']))
   const [pixelScale, setPixelScale] = useState(4)
   const [shaded, setShaded] = useState(true)
@@ -148,6 +153,17 @@ export function ExportModal() {
 
   const base = safeName(project.meta.name)
   const anim = project.animations.find((a) => a.id === animId) ?? null
+
+  const applyPreset = (p: EnginePreset) => {
+    setPreset(p)
+    const h = ENGINE_PRESETS[p].targetHeight
+    if (h === null) return
+    setScale(scaleForHeight(grid, project.layers, h))
+    setCenter(true)
+    setRig(true)
+    setWithAnims(true)
+    setFmt('glb')
+  }
 
   const spriteOpts = (): SpriteOptions => ({
     views: VIEW_GROUPS.filter((g) => groups.has(g.label)).flatMap((g) => g.ids),
@@ -173,7 +189,8 @@ export function ExportModal() {
         downloadBlob(exportStl(buildExportMesh(grid, layers, { scope: 'all', scale, center })), `${base}.stl`)
       } else if (fmt === 'glb' || fmt === 'gltf') {
         const out = exportGltf(grid, layers, {
-          binary: fmt === 'glb', scale, center, rig, animations: rig && withAnims ? project.animations : [],
+          binary: fmt === 'glb', scale, center, rig,
+          animations: rig && withAnims ? presetAnimations(preset, project.meta.name, project.animations) : [],
         })
         downloadBlob(out.data, `${base}.${out.ext}`, out.ext === 'glb' ? 'model/gltf-binary' : 'model/gltf+json')
         if (rig && !out.rigged) {
@@ -186,6 +203,12 @@ export function ExportModal() {
         else downloadBlob(await canvasToPng(canvas), `${base}_sprites.png`, 'image/png')
       } else if (fmt === 'gif') {
         downloadBlob(renderGif(grid, layers, { ...spriteOpts(), view: gifView }), `${base}.gif`, 'image/gif')
+      } else if (fmt === 'pack') {
+        const { animation: _a, ...rest } = spriteOpts()
+        downloadBlob(
+          await exportAnimationPack(grid, layers, project.animations, { ...rest, gifView, includeGif: true }),
+          `${base}_animations.zip`, 'application/zip',
+        )
       }
       setMessage(previewOnly ? 'Preview updated' : 'Export complete')
     } catch (err) {
@@ -196,7 +219,7 @@ export function ExportModal() {
   }
 
   const isMesh = fmt === 'obj' || fmt === 'stl' || fmt === 'glb' || fmt === 'gltf'
-  const isSprite = fmt === 'png' || fmt === 'gif'
+  const isSprite = fmt === 'png' || fmt === 'gif' || fmt === 'pack'
 
   return (
     <Modal title="Export" onClose={close} width="max-w-xl">
@@ -219,6 +242,11 @@ export function ExportModal() {
 
       {(fmt === 'glb' || fmt === 'gltf') && (
         <>
+          <Row label="Engine preset">
+            <Select<EnginePreset> value={preset} onChange={applyPreset} className="w-56"
+              options={(Object.keys(ENGINE_PRESETS) as EnginePreset[]).map((p) => ({ value: p, label: ENGINE_PRESETS[p].label }))} />
+          </Row>
+          {preset !== 'generic' && <p className="text-[11px] text-neutral-400">{ENGINE_PRESETS[preset].note}</p>}
           <Check checked={rig} onChange={setRig} label="Auto-rig: build a skeleton from body-part layers" />
           {rig && <Check checked={withAnims} onChange={setWithAnims} label={`Include animations (${project.animations.length})`} />}
           {rig && <p className="text-[11px] text-neutral-500">Tag layers with body parts (Layers tab) or start from a template. Each layer is bound rigidly to its bone.</p>}
@@ -229,7 +257,7 @@ export function ExportModal() {
 
       {isSprite && (
         <>
-          {fmt === 'png' && (
+          {(fmt === 'png' || fmt === 'pack') && (
             <div className="flex flex-wrap gap-x-4 gap-y-1">
               {VIEW_GROUPS.map((g) => (
                 <Check key={g.label} label={g.label} checked={groups.has(g.label)} onChange={(v) => {
@@ -241,15 +269,18 @@ export function ExportModal() {
               ))}
             </div>
           )}
-          {fmt === 'gif' && (
+          {(fmt === 'gif' || fmt === 'pack') && (
             <Row label="View"><Select value={gifView} onChange={setGifView} options={(Object.keys(VIEW_LABELS) as ViewId[]).map((v) => ({ value: v, label: VIEW_LABELS[v] }))} /></Row>
           )}
+          {fmt === 'pack' && <p className="text-[11px] text-neutral-400">Exports every animation ({project.animations.length}) as a PNG sheet and a GIF, plus atlas.json with frame size, fps and loop flags.</p>}
+          {fmt !== 'pack' && (
           <Row label="Animation">
             <select className="rounded border border-neutral-600 bg-neutral-900 px-1 py-0.5 text-xs" value={animId} onChange={(e) => setAnimId(e.target.value)}>
               {fmt === 'png' && <option value="">Static (one row)</option>}
               {project.animations.map((a) => <option key={a.id} value={a.id}>{a.name} ({a.length} frames)</option>)}
             </select>
           </Row>
+          )}
           <Row label="Pixels per voxel"><NumberField value={pixelScale} min={1} max={32} onChange={(n) => setPixelScale(Math.max(1, Math.round(n)))} /></Row>
           <Row label="Padding (voxels)"><NumberField value={padding} min={0} max={32} onChange={(n) => setPadding(Math.max(0, Math.round(n)))} /></Row>
           <Check checked={shaded} onChange={setShaded} label="Shaded (off = flat colors)" />

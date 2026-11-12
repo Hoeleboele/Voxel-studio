@@ -5,7 +5,11 @@ export type MaterialName = (typeof MATERIALS)[number]
 
 export type PartId =
   | 'head' | 'torso' | 'armL' | 'armR' | 'legL' | 'legR'
-  | 'legFL' | 'legFR' | 'legBL' | 'legBR' | 'tail' | 'weapon' | 'accessory'
+  | 'legFL' | 'legFR' | 'legBL' | 'legBR' | 'tail' | 'weapon' | 'accessory' | 'wingL' | 'wingR'
+
+export type Species = 'biped' | 'quadruped' | 'robot' | 'winged' | 'blob'
+export type AnimKind = 'idle' | 'walk' | 'jump' | 'hurt' | 'death' | 'attack' | 'custom'
+export type Ease = 'linear' | 'in' | 'out' | 'inOut' | 'step'
 
 export interface Voxel {
   x: number
@@ -39,6 +43,7 @@ export interface Keyframe {
   frame: number
   pos: Vec3
   rot: Vec3 // degrees, Euler XYZ around the layer pivot
+  ease?: Ease // easing towards the next key; linear when absent
 }
 
 export interface Animation {
@@ -49,6 +54,8 @@ export interface Animation {
   loop: boolean
   tracks: Record<number, Keyframe[]>
   snapshots: Record<number, Uint8Array> // frame -> serialized voxels
+  kind?: AnimKind
+  variant?: string
 }
 
 export interface ProjectMeta {
@@ -57,6 +64,7 @@ export interface ProjectMeta {
   description: string
   created: number
   modified: number
+  species?: Species // user override for animation generation
 }
 
 export interface Symmetry {
