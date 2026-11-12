@@ -1,0 +1,198 @@
+# Voxel Character Studio \- AI Application Specification
+
+Build a web\-based and desktop\-compatible 3D voxel modeling application focused on creating pixel\-art\-style characters and assets for games.
+
+## Core Concept
+
+The application should function like Photoshop for pixel art combined with Blender for 3D, but simplified around voxel creation. Users create 3D models using colored cubes (voxels), where each voxel represents a 3D pixel. The primary use case is designing retro\-style characters, creatures, weapons, props, buildings, and environments.
+
+## Main Features
+
+### 1\. 3D Workspace
+
+- Interactive 3D viewport with orbit, pan, and zoom controls.
+- Adjustable grid system.
+- Perspective and orthographic camera modes.
+- Real\-time rendering of voxel models.
+- Customizable background and lighting.
+
+### 2\. Voxel Editing Tools
+
+- Add voxel tool.
+- Remove voxel tool.
+- Paint voxel tool.
+- Color picker.
+- Fill tool.
+- Line tool.
+- Box creation tool.
+- Sphere generation tool.
+- Selection and move tool.
+- Copy/paste selected voxels.
+- Undo/redo history.
+
+### 3\. Character Creation System
+
+- Start from predefined templates: 
+    - Humanoid
+    - Animal
+    - Monster
+    - Robot
+    - Blank canvas
+- Adjustable body proportions.
+- Limb editing.
+- Layer\-based construction system.
+- Character mirroring during editing.
+
+### 4\. Symmetry Mode
+
+- X\-axis symmetry.
+- Y\-axis symmetry.
+- Z\-axis symmetry.
+- Multi\-axis symmetry support.
+- Live mirrored editing.
+
+### 5\. Pixel Art Color Management
+
+- Color palette editor.
+- Retro color palette presets.
+- Custom palette creation.
+- Palette import/export.
+- Replace color globally.
+- Color count optimization.
+
+### 6\. Layer System
+
+- Create layers.
+- Hide/show layers.
+- Lock layers.
+- Rename layers.
+- Layer grouping.
+- Layer opacity preview.
+
+### 7\. Animation System
+
+- Bone\-less voxel animation.
+- Keyframe timeline.
+- Frame\-by\-frame animation.
+- Walk cycle templates.
+- Idle animation templates.
+- Attack animation templates.
+- Animation preview window.
+
+### 8\. Asset Library
+
+- Save reusable parts.
+- Character presets.
+- Heads.
+- Arms.
+- Legs.
+- Weapons.
+- Accessories.
+- Searchable asset browser.
+
+## User Interface
+
+### Left Panel
+
+Tools:
+
+- Draw
+- Erase
+- Paint
+- Select
+- Fill
+- Mirror
+- Move
+- Rotate
+
+### Right Panel
+
+Properties:
+
+- Color Palette
+- Layers
+- Object Structure
+- Animation Timeline
+- Asset Library
+
+### Center
+
+Large 3D editing viewport.
+
+### Top Toolbar
+
+- New
+- Save
+- Export
+- Import
+- Undo
+- Redo
+- Grid Settings
+- Preferences
+
+## Technical Requirements
+
+### Frontend
+
+- React \+ TypeScript
+- Three.js for 3D rendering
+- Tailwind CSS
+- Zustand for state management
+
+### Data Structure
+
+Voxel Object:
+
+- Position X
+- Position Y
+- Position Z
+- Color
+- Layer ID
+- Material Type
+
+Project File:
+
+- Model Data
+- Color Palettes
+- Animations
+- Layers
+- Metadata
+
+## Export Formats
+
+Support exporting:
+
+- VOX
+- OBJ
+- FBX
+- GLTF
+- STL
+- PNG sprite sheets
+- GIF animations
+
+## Advanced Features
+
+### Automatic Sprite Generation
+
+Convert 3D voxel models into:
+
+- Front sprite
+- Side sprite
+- Back sprite
+- Isometric sprite sheets
+
+### Auto\-Rigging
+
+Generate simple animation rigs automatically for humanoid models.
+
+## Performance Goals
+
+- Support projects with 1,000,000\+ voxels.
+- Smooth editing at 60 FPS.
+- GPU\-accelerated rendering.
+- Auto\-save every 30 seconds.
+
+## Design Style
+
+The interface should feel like a modern combination of MagicaVoxel, Blockbench, Photoshop, and Blender while remaining beginner\-friendly. Focus on fast voxel character creation with minimal technical complexity.
+
